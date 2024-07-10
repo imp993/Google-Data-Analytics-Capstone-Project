@@ -1,0 +1,303 @@
+---
+title: "Google_Data_Analytics_Capstone_Project_Cyclistic-bike-share-analysis"
+author: "Ishan Perera"
+date: "2024-07-08"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# **Background**
+
+## *Scenario*
+I am a junior data analyst working on the marketing analyst team at Cyclistic, a bike-share company in Chicago. The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. Therefore, our team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights, our team will design a new marketing strategy to convert casual riders into annual members. 
+
+## *About the company*
+In 2016, Cyclistic launched a successful bike-share offering. Since then, the program has grown to a fleet of 5,824 bicycles that are geotracked and locked into a network of 692 stations across Chicago. The bikes can be unlocked from one station and returned to any other station in the system anytime.
+
+Until now, Cyclistic’s marketing strategy relied on building general awareness and appealing to broad consumer segments. One approach that helped make these things possible was the flexibility of its pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members.
+
+Cyclistic’s finance analysts have concluded that annual members are much more profitable than casual riders. Although the pricing flexibility helps Cyclistic attract more customers,
+The director believes that maximizing the number of annual members will be key to future growth.
+Rather than creating a marketing campaign that targets all-new customers, the director believes
+there is a solid opportunity to convert casual riders into members. She notes that casual riders
+are already aware of the Cyclistic program and have chosen Cyclistic for their mobility needs.
+
+
+#### **Goal**:  
+Design marketing strategies aimed at converting casual riders into annual members 
+
+#### **Business Question**:
+How do annual members and casual riders use Cyclistic bikes differently?
+
+
+# **Data Preparation and Process**
+I used R to analyze the data because it could handle all of the information quicker than Excel. First I Downloaded data and store it appropriately in my desktop and follow the below steps. 
+
+Data source: <https://divvy-tripdata.s3.amazonaws.com/index.html/>
+
+#### 1. Load the libraries as required
+
+```{r Load the libraries, message=FALSE, warning=FALSE}
+library(tidyverse) #calculations
+library(lubridate) #dates 
+library(ggplot2) # data visualization
+```
+
+#### 2. Uploaded all of the original data into R studio. (4 CSV Files. From 2024 Jan to 2024 April)
+```{r Load data}
+jan24_df <- read.csv("202401-divvy-tripdata.csv")
+feb24_df <- read.csv("202402-divvy-tripdata.csv")
+mar24_df <- read.csv("202403-divvy-tripdata.csv")
+apr24_df <- read.csv("202404-divvy-tripdata.csv")
+```
+
+#### 3. Merged the 4 dataframes into single data frame
+
+```{r merge into single file}
+Cyclistic_df <- rbind(jan24_df, feb24_df, mar24_df, apr24_df)
+```
+
+#####  *Get a really quick idea of what's in this data set*
+
+```{r}
+glimpse(Cyclistic_df) # before clean the data
+```
+We can see the in this data set 1,084,749 rows and 13 columns included before clean up the data. 
+
+
+##### **Create new data frame to contain new columns**
+
+```{r}
+Cyclistic_data <- Cyclistic_df
+```
+
+##### **Preview of the column names and the first few rows of this data set**
+
+```{r}
+head(Cyclistic_data)
+```
+
+
+#### 4. Add two columns data set (ride_length and day_of_Week)
+
+  - Calculate ride length by subtracting ended_at time from started_at time and converted it to minutes
+
+```{r}
+Cyclistic_data$ride_length <- difftime(Cyclistic_df$ended_at, Cyclistic_df$started_at, units = "mins") 
+# subtracting ended_at time from started_at time and converted it to minutes
+```
+
+  - Calculate the day of the week 
+```{r}
+Cyclistic_data$date <- as.Date(Cyclistic_data$started_at) # convert date
+Cyclistic_data$day_of_week <- wday(Cyclistic_df$started_at) # return day of the week as a decimal number
+Cyclistic_data$day_of_week <- format(as.Date(Cyclistic_data$date), "%A") 
+```
+
+##### **Preview of the column names and the first few rows of this data set**
+
+```{r}
+head(Cyclistic_data)
+```
+
+
+#### 5. Clean the Data
+
+```{r}
+Cyclistic_data <- na.omit(Cyclistic_data) #remove rows with NA values
+Cyclistic_data <- distinct(Cyclistic_data) #remove duplicate rows 
+Cyclistic_data <- Cyclistic_data[!(Cyclistic_data$ride_length <=0),] #remove where ride_length is 0 or negative
+```
+
+#####  *Get a really quick idea of what's in this data set after the clean up*
+
+```{r}
+glimpse(Cyclistic_data) # After clean the data
+```
+After the clean up We can see 1,082,849 rows (before clean up 1,084,749 rows) and 16 columns included
+
+
+
+# **Data Analyze and Visualization**
+
+## Total Rides (From 2024 Jan to 2024 Apr)
+
+#### **1. Total number of rides**
+
+```{r}
+nrow(Cyclistic_data)
+```
+#### **2. Total number of rides by member type**
+
+```{r}
+Cyclistic_data %>%
+  group_by(member_casual) %>% 
+  count(member_casual)
+```
+
+```{r}
+options(scipen = 999)
+ggplot(data = Cyclistic_data) +
+  geom_bar(mapping = aes(x = member_casual, fill = member_casual, stat = "identity")) +
+  labs(x = "Member Type", y = "Number of Rides", title = "Cyclistic Bike-Share Customers by Membership Type")
+```
+
+
+#### **3. Total number of rides by bike type**
+
+```{r}
+Cyclistic_data %>%
+  group_by(rideable_type) %>% 
+  count(rideable_type)
+```
+
+```{r}
+options(scipen = 999)
+ggplot(data = Cyclistic_data) +
+  geom_bar(mapping = aes(x = rideable_type, fill = rideable_type, stat = "identity")) +
+  labs(x = "Rideable Bike Type", y = "Number of Rides", title = "Cyclistic Bike-Share Customers by Rideable Bike Type")
+```
+
+
+
+#### **4. Total number of rides by member type and bike type**
+
+```{r}
+Cyclistic_data %>%
+  group_by(member_casual, rideable_type) %>% 
+  count(rideable_type)
+```
+
+
+```{r}
+Cyclistic_data %>%
+  group_by(member_casual, rideable_type) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = rideable_type, y = count, fill = member_casual)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Rideable Type", y = "Number of Rides", title = "Cyclistic Bike Share: Member vs. Casual Riders") +
+  theme_minimal()
+```
+
+
+
+#### **5. Total number of rides by day of the week**
+
+```{r}
+Cyclistic_data %>%
+  count(day_of_week)
+```
+
+```{r}
+options(scipen = 999)
+ggplot(data = Cyclistic_data) +
+  geom_bar(mapping = aes(x = day_of_week, fill = day_of_week, stat = "identity")) +
+  labs(x = "Day of the Week", y = "Count of Rides", title = "Cyclistic Bike Share: Rides by Day of the Week") +
+  theme_minimal()
+```
+
+
+
+#### **6. Total number of rides by member type and day of the week**
+
+```{r}
+Cyclistic_data %>%
+  group_by(member_casual) %>% 
+  count(day_of_week)
+```
+
+
+```{r}
+Cyclistic_data %>%
+  group_by(member_casual, day_of_week) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = day_of_week, y = count, fill = member_casual)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Day of the Week", y = "Count of Rides", title = "Cyclistic Bike Share: Rides by Day of the Week") +
+  theme_minimal()
+```
+
+
+## Average Ride Length (From 2024 Jan to 2024 Apr)
+
+
+#### **1. Average ride length **
+
+```{r}
+cyclistic_avgRide <- mean(Cyclistic_data$ride_length)
+print(cyclistic_avgRide)
+```
+
+#### **2. Average ride length by Member type**
+
+```{r}
+cyclistic_avgMeber <- Cyclistic_data %>% group_by(member_casual) %>% 
+                        summarise_at(vars(ride_length),list(time = mean))
+cyclistic_avgMeber
+```
+
+```{r}
+ggplot(cyclistic_avgMeber) +
+  geom_col(aes(x = time, y = member_casual), fill = 'green', width = 0.5)+
+  labs(x = "Average Time", y = "Member Type", title = "Cyclistic Bike Share: Member Type and Average Time") +
+  theme_minimal()
+```
+
+
+
+#### **3. Average ride length by Bike type **
+
+```{r}
+Cyclistic_data %>% group_by(rideable_type) %>% 
+  summarise_at(vars(ride_length),
+               list(time = mean))
+```
+
+
+#### **4. Average ride length by Bike type and member type **
+
+```{r}
+Cyclistic_data %>% group_by(member_casual, rideable_type) %>% 
+  summarise_at(vars(ride_length),list(time = mean))
+```
+
+
+```{r}
+Cyclistic_data %>%
+  group_by(member_casual, rideable_type) %>%
+  summarise_at(vars(ride_length), list(time = mean)) %>%
+  ggplot(aes(x = rideable_type, y = time, fill = member_casual)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Rideable Type", y = "Average Ride Length", title = "Cyclistic Bike Share: Member vs. Casual Riders") +
+  theme_minimal()
+```
+
+
+#### **5. Average ride length by Day of the week **
+
+```{r}
+Cyclistic_data %>% group_by(day_of_week) %>% 
+  summarise_at(vars(ride_length),
+               list(time = mean))
+```
+
+
+#### **6. Average ride length by Day of the week and member type**
+
+```{r}
+Cyclistic_data %>% group_by(member_casual, day_of_week) %>% 
+  summarise_at(vars(ride_length),
+               list(time = mean))
+```
+
+
+
+
+
+
